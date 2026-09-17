@@ -4,3 +4,7 @@ __pycache__/
 data/users.json
 data/assessment_history.json
 qa_temp/
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml

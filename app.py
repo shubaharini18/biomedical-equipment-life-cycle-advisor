@@ -30,9 +30,13 @@ def build_header_markup():
     return f"""
     <div class=\"app-header\">
         <div class=\"app-header-content\">
+            <div class=\"app-header-mark\" aria-hidden=\"true\">
+                <span class=\"app-header-cross\"></span>
+                <span class=\"app-header-pulse\"></span>
+            </div>
             <div class=\"app-header-text\">
                 <h1>AI-Based Biomedical Equipment Life-Cycle Advisor</h1>
-                <p>A simple decision-support interface for biomedical equipment planning.</p>
+                <p>AI-powered decision support for sustainable biomedical equipment management.</p>
             </div>
         </div>
     </div>
@@ -52,6 +56,45 @@ def get_recommendation_action(recommendation_label):
         recommendation_label,
         "Review the equipment with the current operating team and follow the standard lifecycle guidance.",
     )
+
+
+def get_lifecycle_visual_state(recommendation_label, last_maintenance):
+    """Return presentation-only lifecycle states from the existing assessment result."""
+
+    stages = [
+        "Procurement",
+        "Installation",
+        "Active Use",
+        "Maintenance",
+        "Lifecycle Review",
+        "Recommended Action",
+    ]
+
+    if recommendation_label == "Continue Assessment":
+        current_stage = "Active Use"
+        summary = "The equipment remains in active use while routine monitoring continues."
+    elif recommendation_label == "Maintenance Assessment":
+        current_stage = "Maintenance"
+        summary = "Maintenance is the current lifecycle focus based on the recorded service timing."
+    else:
+        current_stage = "Lifecycle Review"
+        summary = "The equipment is currently under lifecycle review based on the existing assessment result."
+
+    current_index = stages.index(current_stage)
+    states = []
+    for index, stage in enumerate(stages):
+        if index < current_index:
+            state = "completed"
+        elif index == current_index:
+            state = "current"
+        else:
+            state = "upcoming"
+        states.append({"number": index + 1, "name": stage, "state": state})
+
+    if current_stage == "Lifecycle Review" and last_maintenance == "Never / Unknown":
+        summary = "The equipment is currently under lifecycle review because its maintenance record is unknown."
+
+    return current_stage, summary, states
 
 
 def build_demo_users():
@@ -162,23 +205,63 @@ st.markdown(
             background-attachment: fixed;
         }
         .block-container {
-            padding-top: 2rem;
+            padding-top: 1.5rem;
             padding-bottom: 2rem;
             max-width: 1200px;
         }
         .app-header {
-            background: linear-gradient(135deg, #0f4c81 0%, #0ea5a4 100%);
-            border-radius: 18px;
-            padding: 1.5rem 1.5rem 1rem;
-            margin-bottom: 1.25rem;
-            box-shadow: 0 8px 24px rgba(15, 76, 129, 0.15);
+            position: relative;
+            background: linear-gradient(115deg, #0d3b66 0%, #0f5684 64%, #0a777c 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px;
+            padding: 1.25rem 1.4rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 20px rgba(15, 76, 129, 0.13);
             overflow: hidden;
         }
         .app-header-content {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             gap: 1rem;
+        }
+        .app-header-mark {
+            position: relative;
+            flex: 0 0 64px;
+            height: 64px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.08);
+            background-image: linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .app-header-cross,
+        .app-header-cross::after {
+            position: absolute;
+            content: \"\";
+            background: #d9f7f2;
+            border-radius: 2px;
+        }
+        .app-header-cross {
+            width: 24px;
+            height: 8px;
+            top: 28px;
+            left: 20px;
+        }
+        .app-header-cross::after {
+            width: 8px;
+            height: 24px;
+            top: -8px;
+            left: 8px;
+        }
+        .app-header-pulse {
+            position: absolute;
+            right: 8px;
+            bottom: 9px;
+            width: 18px;
+            height: 2px;
+            background: #8ee3d5;
+            transform: rotate(-28deg);
+            box-shadow: -8px 4px 0 -0.25px #8ee3d5, -13px 0 0 -0.25px #8ee3d5;
         }
         .app-header-text {
             flex: 1 1 auto;
@@ -187,14 +270,91 @@ st.markdown(
         .app-header h1 {
             color: #ffffff !important;
             margin: 0;
-            font-size: 2.1rem;
+            font-size: 1.9rem;
             font-weight: 700;
+            letter-spacing: -0.01em;
         }
         .app-header p {
             color: rgba(255, 255, 255, 0.9);
             margin-top: 0.5rem;
             margin-bottom: 0;
             font-size: 1rem;
+        }
+        .workspace-intro {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            background: #ffffff;
+            border: 1px solid #d4e6f0;
+            border-left: 4px solid #0e8c91;
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            margin: 0.75rem 0 0.85rem;
+            box-shadow: 0 4px 12px rgba(15, 76, 129, 0.05);
+        }
+        .workspace-intro h2 {
+            margin: 0 0 0.18rem;
+            color: #0d3b66;
+            font-size: 1.35rem;
+        }
+        .workspace-intro p {
+            margin: 0;
+            color: #52677a;
+            font-size: 0.92rem;
+        }
+        .workspace-intro-badge {
+            flex: 0 0 auto;
+            color: #0d6670;
+            background: #e6f6f3;
+            border: 1px solid #b9e5dd;
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        div[data-testid="stForm"] {
+            background: #ffffff;
+            border: 1px solid #d4e6f0;
+            border-radius: 14px;
+            padding: 1.1rem 1.2rem 0.85rem;
+            box-shadow: 0 5px 16px rgba(15, 76, 129, 0.06);
+        }
+        div[data-testid="stForm"] h3 {
+            color: #0d3b66;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
+            margin: 0.35rem 0 0.65rem;
+            padding-bottom: 0.45rem;
+            border-bottom: 1px solid #e2edf3;
+        }
+        .form-group-label {
+            color: #0e6974;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            margin: 0.7rem 0 0.1rem;
+            text-transform: uppercase;
+        }
+        div[data-testid="stFormSubmitButton"] > button {
+            width: 100%;
+            min-height: 2.7rem;
+            margin-top: 0.65rem;
+            border-radius: 9px;
+            background: #0d6670;
+            border: 1px solid #0d6670;
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 5px 12px rgba(13, 102, 112, 0.18);
+            transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+        div[data-testid="stFormSubmitButton"] > button:hover {
+            background: #0a525b;
+            border-color: #0a525b;
+            box-shadow: 0 7px 15px rgba(13, 102, 112, 0.24);
+            transform: translateY(-1px);
         }
         h2, h3 {
             color: #0f172a;
@@ -330,12 +490,12 @@ st.markdown(
             overflow: hidden;
         }
         .result-card {
-            background: linear-gradient(135deg, #f0f9ff 0%, #f9fcff 100%);
-            border: 1px solid #c3deee;
-            border-radius: 18px;
-            padding: 1.25rem;
-            box-shadow: 0 8px 24px rgba(15, 76, 129, 0.12);
-            margin-bottom: 1rem;
+            background: #ffffff;
+            border: 1px solid #d4e6f0;
+            border-radius: 14px;
+            padding: 1.1rem 1.2rem;
+            box-shadow: 0 5px 16px rgba(15, 76, 129, 0.07);
+            margin-bottom: 0.9rem;
         }
         .result-card p,
         .result-card ul,
@@ -354,6 +514,239 @@ st.markdown(
             letter-spacing: 0.08em;
             text-transform: uppercase;
             margin-bottom: 0.5rem;
+        }
+        .result-card--primary {
+            border-top: 4px solid #0e8c91;
+            padding-top: 1rem;
+        }
+        .result-card--priority {
+            border-left: 4px solid #0e8c91;
+        }
+        .result-card--action {
+            background: #f2f8fc;
+            border-left: 4px solid #0f5684;
+        }
+        .result-card--sustainability {
+            background: #f3fbf7;
+            border-color: #c5e8d5;
+            border-left: 4px solid #2a9d68;
+        }
+        .result-card--ai {
+            background: #f8fbfd;
+            border-color: #d8e8f0;
+        }
+        .result-summary-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+            gap: 1rem;
+            align-items: stretch;
+        }
+        .result-equipment-name {
+            color: #0d3b66;
+            font-size: 1.65rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 0.25rem;
+        }
+        .result-equipment-category {
+            color: #52677a;
+            font-size: 0.95rem;
+        }
+        .priority-panel {
+            border-radius: 10px;
+            padding: 0.8rem 0.9rem;
+            border: 1px solid #c9e1eb;
+            background: #f7fbfd;
+        }
+        .priority-panel--high {
+            border-color: #efc3c0;
+            background: #fff5f4;
+        }
+        .priority-panel--medium {
+            border-color: #ecd39d;
+            background: #fffaf0;
+        }
+        .priority-panel--low {
+            border-color: #b9e1ca;
+            background: #f3fbf6;
+        }
+        .priority-badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.32rem 0.65rem;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .priority-badge--high {
+            color: #a33a35;
+            background: #fbe0de;
+        }
+        .priority-badge--medium {
+            color: #956511;
+            background: #f9e9bd;
+        }
+        .priority-badge--low {
+            color: #217346;
+            background: #dff3e6;
+        }
+        .priority-reason {
+            color: #52677a;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            margin: 0.55rem 0 0;
+        }
+        .result-recommendation {
+            color: #0d3b66;
+            font-size: 1.25rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin: 0.1rem 0 0.85rem;
+        }
+        .result-action-label {
+            color: #0e6974;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .result-factor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+        .result-factor {
+            background: #f8fbfd;
+            border: 1px solid #deebf1;
+            border-radius: 9px;
+            padding: 0.65rem 0.75rem;
+        }
+        .result-factor .info-label {
+            margin-bottom: 0.2rem;
+            font-size: 0.68rem;
+        }
+        .result-factor-value {
+            color: #263b4b;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+        .result-card--sustainability p {
+            color: #24543a;
+        }
+        .ai-section-note {
+            color: #52677a;
+            font-size: 0.88rem;
+            margin: -0.15rem 0 0.75rem;
+        }
+        .lifecycle-card {
+            background: #ffffff;
+            border: 1px solid #d4e6f0;
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 5px 16px rgba(15, 76, 129, 0.06);
+            margin-bottom: 0.9rem;
+        }
+        .lifecycle-track {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.4rem;
+            margin: 0.8rem 0 1rem;
+        }
+        .lifecycle-track::before {
+            position: absolute;
+            content: "";
+            top: 16px;
+            left: 7%;
+            right: 7%;
+            height: 2px;
+            background: #dbe7ed;
+        }
+        .lifecycle-stage {
+            position: relative;
+            min-width: 0;
+            text-align: center;
+        }
+        .lifecycle-marker {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 0.45rem;
+            border: 2px solid #d0dde4;
+            border-radius: 50%;
+            background: #f4f7f9;
+            color: #7a8b96;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+        .lifecycle-stage-name {
+            color: #667985;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            line-height: 1.25;
+            text-transform: uppercase;
+        }
+        .lifecycle-state {
+            color: #87959d;
+            font-size: 0.64rem;
+            margin-top: 0.22rem;
+            text-transform: uppercase;
+        }
+        .lifecycle-stage--completed .lifecycle-marker {
+            border-color: #75b9bc;
+            background: #e5f4f3;
+            color: #0c6d73;
+        }
+        .lifecycle-stage--completed .lifecycle-stage-name {
+            color: #2a6871;
+        }
+        .lifecycle-stage--current .lifecycle-marker {
+            border-color: #0e8c91;
+            background: #0e8c91;
+            color: #ffffff;
+            box-shadow: 0 0 0 5px #dff3f1;
+        }
+        .lifecycle-stage--current .lifecycle-stage-name,
+        .lifecycle-stage--current .lifecycle-state {
+            color: #0d5965;
+            font-weight: 800;
+        }
+        .lifecycle-stage--upcoming {
+            opacity: 0.7;
+        }
+        .lifecycle-summary-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+            gap: 0.75rem;
+        }
+        .lifecycle-summary-item {
+            background: #f7fbfd;
+            border: 1px solid #deebf1;
+            border-radius: 9px;
+            padding: 0.7rem 0.8rem;
+        }
+        .lifecycle-summary-item--next {
+            background: #f2f8fc;
+            border-color: #cfe2ed;
+        }
+        .lifecycle-summary-value {
+            color: #0d3b66;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .lifecycle-summary-text {
+            color: #52677a;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            margin: 0.3rem 0 0;
         }
         .result-title {
             font-size: 2rem;
@@ -415,6 +808,42 @@ st.markdown(
             height: 100% !important;
             min-height: 240px !important;
             max-height: 240px !important;
+        }
+        @media (max-width: 640px) {
+            .app-header-mark {
+                flex-basis: 50px;
+                height: 50px;
+            }
+            .app-header h1 {
+                font-size: 1.45rem;
+            }
+            .app-header p {
+                font-size: 0.88rem;
+            }
+            .workspace-intro {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            div[data-testid="stForm"] {
+                padding: 0.85rem 0.85rem 0.7rem;
+            }
+            .result-summary-grid,
+            .result-factor-grid {
+                grid-template-columns: 1fr;
+            }
+            .result-equipment-name {
+                font-size: 1.4rem;
+            }
+            .lifecycle-track {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 0.9rem;
+            }
+            .lifecycle-track::before {
+                display: none;
+            }
+            .lifecycle-summary-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
     """,
@@ -548,6 +977,19 @@ st.markdown(
     "This tool supports sustainable management of biomedical equipment in alignment with SDG 12 – Responsible Consumption and Production."
 )
 
+st.markdown(
+    """
+    <div class="workspace-intro">
+        <div>
+            <h2>Equipment Workspace</h2>
+            <p>Enter the current equipment information to begin lifecycle assessment.</p>
+        </div>
+        <div class="workspace-intro-badge">Asset assessment</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 category_options = ["Imaging", "Monitor", "Ventilator", "Laboratory Analyzer", "Other"]
 equipment_name_options = [item["equipment_name"] for item in SAMPLE_EQUIPMENT]
 
@@ -561,6 +1003,8 @@ selected_equipment = next(
 
 with st.form("equipment_form"):
     st.subheader("1. Equipment Information")
+
+    st.markdown('<div class="form-group-label">Equipment profile</div>', unsafe_allow_html=True)
 
     equipment_name = st.selectbox(
         "Equipment name",
@@ -587,9 +1031,11 @@ with st.form("equipment_form"):
         horizontal=True,
     )
 
-    st.subheader("2. Maintenance & Lifecycle Information")
+    st.markdown('<div class="form-group-label">Current status</div>', unsafe_allow_html=True)
 
     known_issue = st.text_area("Known issue/problem")
+
+    st.markdown('<div class="form-group-label">Lifecycle information</div>', unsafe_allow_html=True)
 
     last_maintenance = st.selectbox(
         "Last Maintenance",
@@ -649,14 +1095,37 @@ if submitted:
             known_issue=known_issue,
         )
         recommendation_action = get_recommendation_action(recommendation["recommendation"])
+        priority_level = priority_result["priority"].split()[0].lower()
+        current_lifecycle_stage, lifecycle_summary, lifecycle_states = get_lifecycle_visual_state(
+            recommendation["recommendation"],
+            last_maintenance,
+        )
+        lifecycle_stages_html = "".join(
+            [
+                f"<div class=\"lifecycle-stage lifecycle-stage--{stage['state']}\"><div class=\"lifecycle-marker\">{stage['number']}</div><div class=\"lifecycle-stage-name\">{stage['name']}</div><div class=\"lifecycle-state\">{stage['state']}</div></div>"
+                for stage in lifecycle_states
+            ]
+        )
 
         st.markdown("### ASSESSMENT RESULT")
         st.markdown(
             f"""
-            <div class="result-card">
-                <div class="result-label">Assessment Result</div>
+            <div class="result-card result-card--primary">
+                <div class="result-label">Decision support outcome</div>
+                <div class="result-summary-grid">
+                    <div>
+                        <div class="info-label">Equipment assessed</div>
+                        <div class="result-equipment-name">{equipment_name}</div>
+                        <div class="result-equipment-category">{equipment_category}</div>
+                    </div>
+                    <div class="priority-panel priority-panel--{priority_level}">
+                        <div class="info-label">Priority</div>
+                        <div class="priority-badge priority-badge--{priority_level}">{priority_result['priority']}</div>
+                        <p class="priority-reason">{priority_result['reason']}</p>
+                    </div>
+                </div>
+                <div class="info-label" style="margin-top: 1rem;">Recommendation</div>
                 <div class="result-title">{recommendation['recommendation']}</div>
-                <div class="result-action"><strong>Action:</strong> {recommendation_action}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -665,15 +1134,32 @@ if submitted:
         st.markdown("### PRIORITY")
         st.markdown(
             f"""
-            <div class="result-card">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Priority</span><br>
-                        <strong>{priority_result['priority']}</strong>
+            <div class="result-card result-card--priority priority-panel--{priority_level}">
+                <span class="priority-badge priority-badge--{priority_level}">{priority_result['priority']}</span>
+                <p class="priority-reason">{priority_result['reason']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("### EQUIPMENT LIFE-CYCLE")
+        st.markdown(
+            f"""
+            <div class="lifecycle-card">
+                <div class="result-label">Lifecycle position</div>
+                <div class="lifecycle-track">
+                    {lifecycle_stages_html}
+                </div>
+                <div class="lifecycle-summary-grid">
+                    <div class="lifecycle-summary-item">
+                        <div class="info-label">Current lifecycle stage</div>
+                        <div class="lifecycle-summary-value">{current_lifecycle_stage}</div>
+                        <p class="lifecycle-summary-text">{lifecycle_summary}</p>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Reason</span><br>
-                        {priority_result['reason']}
+                    <div class="lifecycle-summary-item lifecycle-summary-item--next">
+                        <div class="info-label">Next step</div>
+                        <div class="lifecycle-summary-value">{recommendation['recommendation']}</div>
+                        <p class="lifecycle-summary-text">{recommendation_action}</p>
                     </div>
                 </div>
             </div>
@@ -684,20 +1170,19 @@ if submitted:
         st.markdown("### KEY FACTORS CONSIDERED")
         key_factors_html = "".join(
             [
-                f"<div class='info-item'><span class='info-label'>Equipment name</span><br>{equipment_name}</div>",
-                f"<div class='info-item'><span class='info-label'>Equipment category</span><br>{equipment_category}</div>",
-                f"<div class='info-item'><span class='info-label'>Age</span><br>{age_years} years</div>",
-                f"<div class='info-item'><span class='info-label'>Current condition</span><br>{current_condition}</div>",
-                f"<div class='info-item'><span class='info-label'>Known issue/problem</span><br>{known_issue}</div>",
-                f"<div class='info-item'><span class='info-label'>Maintenance status</span><br>{maintenance_history}</div>",
-                f"<div class='info-item'><span class='info-label'>Last maintenance</span><br>{last_maintenance}</div>",
-                f"<div class='info-item'><span class='info-label'>Manufacturer support</span><br>{manufacturer_support}</div>",
+                f"<div class='result-factor'><span class='info-label'>Equipment age</span><div class='result-factor-value'>{age_years} years</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Current condition</span><div class='result-factor-value'>{current_condition}</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Known issue / problem</span><div class='result-factor-value'>{known_issue}</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Maintenance status</span><div class='result-factor-value'>{maintenance_history}</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Last maintenance</span><div class='result-factor-value'>{last_maintenance}</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Manufacturer support</span><div class='result-factor-value'>{manufacturer_support}</div></div>",
+                f"<div class='result-factor'><span class='info-label'>Usage intensity</span><div class='result-factor-value'>{usage_intensity}</div></div>",
             ]
         )
         st.markdown(
             f"""
             <div class="result-card">
-                <div class="info-grid">
+                <div class="result-factor-grid">
                     {key_factors_html}
                 </div>
             </div>
@@ -708,7 +1193,9 @@ if submitted:
         st.markdown("### RECOMMENDED ACTION")
         st.markdown(
             f"""
-            <div class="result-card">
+            <div class="result-card result-card--action">
+                <div class="result-action-label">Recommended action</div>
+                <div class="result-recommendation">{recommendation['recommendation']}</div>
                 <p>{recommendation_action}</p>
             </div>
             """,
@@ -718,7 +1205,8 @@ if submitted:
         st.markdown("### SUSTAINABILITY BENEFIT")
         st.markdown(
             """
-            <div class="result-card">
+            <div class="result-card result-card--sustainability">
+                <div class="result-action-label">Sustainability benefit</div>
                 <p>This recommendation supports responsible biomedical equipment lifecycle management by encouraging timely review, practical maintenance, and careful reuse or replacement decisions.</p>
                 <p>It aligns with SDG 12 by helping extend useful equipment life where appropriate and reducing unnecessary early disposal.</p>
             </div>
@@ -759,8 +1247,9 @@ if submitted:
 
         st.markdown(
             f"""
-            <div class="result-card">
+            <div class="result-card result-card--ai">
                 <div class="result-label">1. WHY THIS RECOMMENDATION?</div>
+                <p class="ai-section-note">A structured explanation based on the recorded equipment profile and existing recommendation.</p>
                 <p>{recommendation['reason']}</p>
             </div>
             """,
@@ -769,7 +1258,7 @@ if submitted:
 
         st.markdown(
             f"""
-            <div class="result-card">
+            <div class="result-card result-card--ai">
                 <div class="result-label">2. KEY FACTORS</div>
                 <ul>
                     {factors_html}
@@ -781,7 +1270,7 @@ if submitted:
 
         st.markdown(
             f"""
-            <div class="result-card">
+            <div class="result-card result-card--ai">
                 <div class="result-label">3. WHAT THIS MEANS</div>
                 <p>{recommendation_meaning.get(recommendation['recommendation'], 'The equipment should be reviewed using the existing recommendation and current equipment information.')}</p>
             </div>
@@ -791,7 +1280,7 @@ if submitted:
 
         st.markdown(
             """
-            <div class="result-card">
+            <div class="result-card result-card--ai result-card--sustainability">
                 <div class="result-label">4. SUSTAINABILITY BENEFIT</div>
                 <p>This recommendation supports responsible equipment lifecycle management by encouraging a practical, review-based approach to maintenance, reuse, or replacement.</p>
                 <p>It aligns with SDG 12 by helping extend useful equipment life where appropriate and supporting a more responsible use of existing biomedical assets.</p>
@@ -908,16 +1397,35 @@ st.subheader("Sustainability Dashboard")
 
 history = load_assessment_history()
 dashboard_stats = build_dashboard_stats(history)
+st.markdown("### ASSESSMENT OVERVIEW")
 
-st.markdown("### Assessment Statistics")
+col1, col2, col3, col4 = st.columns(4)
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
-col1.metric("Total assessments", dashboard_stats["total_assessments"])
-col2.metric("Repair Assessments", dashboard_stats["repair_assessments"])
-col3.metric("Refurbishment Considerations", dashboard_stats["refurbishment_considerations"])
-col4.metric("Reuse Considerations", dashboard_stats["reuse_considerations"])
-col5.metric("End-of-Life Reviews", dashboard_stats["end_of_life_reviews"])
-col6.metric("Maintenance Assessments", dashboard_stats["maintenance_assessments"])
+col1.metric(
+    "Total Assessments",
+    dashboard_stats["total_assessments"],
+)
+
+col2.metric(
+    "Maintenance Reviews",
+    dashboard_stats["maintenance_assessments"],
+)
+
+col3.metric(
+    "End-of-Life Reviews",
+    dashboard_stats["end_of_life_reviews"],
+)
+
+lifecycle_reviews = (
+    dashboard_stats["repair_assessments"]
+    + dashboard_stats["refurbishment_considerations"]
+    + dashboard_stats["reuse_considerations"]
+)
+
+col4.metric(
+    "Lifecycle Reviews",
+    lifecycle_reviews,
+)
 
 recommendation_categories = [
     "Continue Assessment",
